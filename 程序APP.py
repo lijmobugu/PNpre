@@ -104,5 +104,5 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
-except Exception as e:
+    except Exception as e:
         st.error(f"An error occurred: {e}")
