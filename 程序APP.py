@@ -104,13 +104,16 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
-     # SHAP 可视化  
-        explainer = shap.KernelExplainer(model.predict_proba, features)  
-        shap_values = explainer.shap_values(features)  
+     # 确保 features 是一个二维数组  
+        features_array = features.values  
+
+        # SHAP 可视化  
+        explainer = shap.KernelExplainer(model.predict_proba, features_array)  
+        shap_values = explainer.shap_values(features_array)  
 
         # 绘制 SHAP 值图  
         st.subheader("SHAP Values:")  
-        shap.summary_plot(shap_values, features, feature_names=feature_names, show=False)  
+        shap.summary_plot(shap_values, features_array, feature_names=feature_names, show=False)  
         plt.tight_layout()  
         st.pyplot(plt)  
 
