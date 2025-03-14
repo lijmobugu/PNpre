@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import streamlit as st
+from sklearn.preprocessing import LabelEncoder
 import shap
 # 机器学习库
 from sklearn.pipeline import Pipeline
@@ -29,7 +31,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif, RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import SelectFromModel
-from sklearn.preprocessing import LabelEncoder  
+
 import joblib
 import logging
 import warnings
