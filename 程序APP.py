@@ -97,3 +97,6 @@ if st.button("Predict"):
 
     except Exception as e:  
         st.error(f"An error occurred: {e}")  
+
+st.write("Predicted probabilities:", predicted_proba)  
+st.write("Input features:", features.values)  
