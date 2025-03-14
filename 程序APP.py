@@ -33,7 +33,7 @@ from sklearn.feature_selection import SelectFromModel
 import joblib
 import logging
 import warnings
-
+import streamlit as st  
 # 加载模型
 try:
     model = joblib.load('stacking_final.pkl')
