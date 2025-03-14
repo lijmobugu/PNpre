@@ -76,6 +76,9 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")  
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")  
 
+        # 打印预测概率以进行调试  
+        st.write("Predicted probabilities:", predicted_proba)  
+
         # 创建LIME解释器  
         # 使用训练数据而不是当前输入的特征  
         explainer = LimeTabularExplainer(  
@@ -88,7 +91,8 @@ if st.button("Predict"):
         # 生成解释  
         exp = explainer.explain_instance(  
             data_row=features.values[0],    # 当前预测的特征  
-            predict_fn=model.predict_proba    # 预测函数  
+            predict_fn=model.predict_proba,  # 预测函数  
+            num_features=len(feature_names)   # 显示所有特征  
         )  
 
         # 显示LIME解释图  
@@ -97,6 +101,3 @@ if st.button("Predict"):
 
     except Exception as e:  
         st.error(f"An error occurred: {e}")  
-
-st.write("Predicted probabilities:", predicted_proba)  
-st.write("Input features:", features.values)  
