@@ -31,7 +31,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif, RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import SelectFromModel
-
+from lime.lime_tabular import LimeTabularExplainer  
 import joblib
 import logging
 import warnings
@@ -107,79 +107,37 @@ if st.button("Predict"):
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# 在预测结果显示之后替换为以下代码
+  # 预测与 LIME 可视化  
+if st.button("Predict"):  
+    try:  
+        # 模型预测  
+        predicted_class = model.predict(features)[0]  
+        predicted_proba = model.predict_proba(features)[0]  
 
-# SHAP可视化部分
-st.subheader("SHAP特征影响解析")
+        # 提取预测的类别概率  
+        probability = predicted_proba[predicted_class] * 100  
 
-try:
-    # 数据完整性检查
-    if features.isnull().any().any() or np.isinf(features.values).any():
-        raise ValueError("输入数据包含缺失值或无限值，请检查所有数值特征的输入范围")
+        # 显示预测结果  
+        st.subheader("Prediction Result:")  
+        st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")  
 
-    # 使用训练数据作为背景（示例需替换实际训练数据路径）
-    @st.cache_resource
-    def load_background_data():
-        try:
-            return pd.read_csv('training_data.csv').sample(50, random_state=42)
-        except:
-            # 生成合法背景数据的保底方案
-            synthetic_data = pd.DataFrame({feat: np.linspace(props['min'], props['max'], 50) 
-                                         if props['type'] == 'numerical' 
-                                         else [props['options'][0]]*50 
-                                         for feat, props in feature_ranges.items()})
-            return synthetic_data
+        # 创建LIME解释器  
+        explainer = LimeTabularExplainer(  
+            training_data=features.values,  # 训练数据  
+            feature_names=feature_names,     # 特征名称  
+            class_names=["No AKI", "AKI"],   # 类别名称  
+            mode='classification'             # 模式  
+        )  
 
-    background_data = load_background_data()
+        # 生成解释  
+        exp = explainer.explain_instance(  
+            data_row=features.values[0],    # 当前预测的特征  
+            predict_fn=model.predict_proba    # 预测函数  
+        )  
 
-    # 创建稳健的解释器
-    with st.spinner("正在生成解释（预计耗时8-15秒）..."):
-        explainer = shap.KernelExplainer(
-            model.predict_proba, 
-            background_data,
-            feature_names=feature_names
-        )
-        
-        # 分步计算SHAP值
-        shap_values = explainer.shap_values(
-            features,
-            nsamples=50,  # 平衡精度与速度
-            l1_reg="num_features(10)"  # 特征归并
-        )
+        # 显示LIME解释图  
+        fig = exp.as_pyplot_figure()  
+        st.pyplot(fig)  
 
-    # 可视化组件
-    with st.expander("特征全局影响力排名"):
-        plt.figure(figsize=(8, 4))
-        shap.summary_plot(shap_values[1], features, 
-                         plot_type="bar", 
-                         color_bar=False,
-                         max_display=10)
-        plt.title("TOP 10关键临床指标", fontsize=12)
-        st.pyplot(plt.gcf())
-        plt.clf()
-
-    with st.expander("个体化影响分解图"):
-        plt.figure(figsize=(10, 4))
-        shap.decision_plot(explainer.expected_value[1], 
-                          shap_values[1], 
-                          features.values[0],
-                          feature_names=feature_names,
-                          highlight=3)  # 高亮前三重要特征
-        plt.xticks(fontsize=8)
-        st.pyplot(plt.gcf())
-
-except Exception as e:
-    error_info = f"""
-    ## 解析失败: {str(e)}
-    
-    **可能原因及应对措施**：
-    
-    1. 数据完整性问题 → 检查所有数值输入是否在指定范围内
-    2. 内存限制 → 尝试刷新页面后重新提交
-    3. 复杂特征交互 → 联系技术人员调整模型解释参数
-    
-    **技术细节供开发参考**:
-    - 输入数据摘要: {features.describe().to_dict()}
-    - 异常特征检测: {features.isnull().sum().to_dict()}
-    """
-    st.error(error_info)
+    except Exception as e:  
+        st.error(f"An error occurred: {e}")  
