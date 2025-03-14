@@ -153,8 +153,7 @@ if st.button("Predict"):
             impact_df.style.applymap(color_shap, subset=['SHAP Value']),  
             height=400  
         )  
-
-    except Exception as e:  
+except Exception as e:  
         st.error(f"系统错误: {str(e)}")  
         st.markdown("""**故障排除建议**:  
         1. 确认模型文件格式正确  
