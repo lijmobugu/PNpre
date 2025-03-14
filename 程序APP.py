@@ -107,33 +107,47 @@ if st.button("Predict"):
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# 在预测结果显示之后添加以下代码（缩进层级与predicted_proba同级）
+# 在预测结果显示之后添加以下代码（替换之前的SHAP代码）
 
 # SHAP可视化部分
 st.subheader("SHAP Feature Impact Explanation")
 
 try:
-    # 创建SHAP解释器（适用于树模型）
-    explainer = shap.TreeExplainer(model)
+    # 使用通用解释器（适合任意模型）
+    background = shap.maskers.Partition(features, max_samples=50)  # 创建小样本背景数据
+    explainer = shap.KernelExplainer(model.predict_proba, background)
     
-    # 计算SHAP值
-    shap_values = explainer.shap_values(features)
+    # 计算SHAP值（nsamples参数控制计算速度）
+    with st.spinner("Generating explanation (this may take 10-20s)..."):
+        shap_values = explainer.shap_values(features, nsamples=100)
     
-    # 创建解释图
-    plt.figure(figsize=(10, 6))
-    shap.summary_plot(shap_values, features, plot_type="bar", show=False)
+    # 创建特征重要性图
+    st.write("**Global Feature Importance**")
+    plt.figure(figsize=(8, 4))
+    shap.summary_plot(shap_values[1],  # 显示正类（AKI）的影响
+                     features=features,
+                     feature_names=feature_names,
+                     plot_type="bar",
+                     show=False)
     st.pyplot(plt.gcf())
     plt.clf()
     
-    # 创建详细解释图
-    st.write("Detailed Feature Impact:")
-    plt.figure(figsize=(10, 4))
-    shap.force_plot(explainer.expected_value[0], 
-                   shap_values[0], 
-                   features,
-                   matplotlib=True,
-                   show=False)
+    # 创建个体样本解释图
+    st.write("**Individual Prediction Breakdown**")
+    plt.figure(figsize=(10, 3))
+    shap.decision_plot(explainer.expected_value[1],
+                      shap_values[1],
+                      features=features,
+                      feature_names=feature_names,
+                      show=False)
+    plt.tight_layout()
     st.pyplot(plt.gcf())
     
 except Exception as e:
-    st.error(f"SHAP visualization failed: {str(e)}")
+    st.error(f"""
+        SHAP可视化失败: {str(e)}
+        可能原因及解决方法：
+        1. 模型结构复杂导致计算超时 → 稍后重试
+        2. 内存不足 → 减少nsamples参数值
+        3. 浏览器兼容问题 → 刷新页面
+        """)
