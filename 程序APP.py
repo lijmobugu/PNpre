@@ -104,22 +104,39 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
-    # 确保 features 是一个二维数组  
-        features_array = features.values  # 这是一个二维数组  
+    # SHAP可视化 (适配Stacking模型)
+        def model_predict(x):
+            return model.predict_proba(x)
 
-        # 创建一个可调用的函数  
-        def model_predict(x):  
-            return model.predict_proba(x)  # 返回预测概率  
+        # 使用样本均值作为背景（更稳定）
+        background = shap.utils.sample(features.values, 10)  # 随机采样10个虚拟背景样本
+        
+        # 创建解释器
+        explainer = shap.KernelExplainer(model_predict, background)
+        
+        # 计算SHAP值（仅针对当前样本）
+        shap_values = explainer.shap_values(features.values, nsamples=100)
+        
+        # 显示单样本force plot
+        st.subheader("SHAP Force Plot")
+        shap.initjs()
+        force_plot = shap.force_plot(
+            explainer.expected_value[1],  # 使用正类期望值
+            shap_values[1][0],            # 正类SHAP值
+            features.values[0], 
+            feature_names=feature_names,
+            matplotlib=True
+        )
+        st.pyplot(force_plot)
+        
+        # 显示重要特征（适配单样本）
+        st.subheader("Feature Impact")
+        single_shap = pd.DataFrame({
+            "Feature": feature_names,
+            "SHAP Value": shap_values[1][0],
+            "Value": features.values[0]
+        })
+        st.dataframe(single_shap.sort_values("SHAP Value", ascending=False))
 
-        # SHAP 可视化  
-        explainer = shap.KernelExplainer(model_predict, features_array)  
-        shap_values = explainer.shap_values(features_array)  
-
-        # 绘制 SHAP 值图  
-        st.subheader("SHAP Values:")  
-        shap.summary_plot(shap_values, features_array, feature_names=feature_names, show=False)  
-        plt.tight_layout()  
-        st.pyplot(plt)  
-
-    except Exception as e:  
-        st.error(f"An error occurred: {e}")  
+    except Exception as e:
+        st.error(f"SHAP Error: {str(e)}")
