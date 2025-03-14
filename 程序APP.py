@@ -104,39 +104,79 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
-    # SHAP可视化 (适配Stacking模型)
+   
+ 
+
+以下是修改后的代码，重点修复SHAP可视化问题并移除IPython依赖：
+
+```python
+# 预测与 SHAP 可视化
+if st.button("Predict"):
+    try:
+        # ... [保持原有的预测代码不变] ...
+
+        # 模型预测部分保持不变
+        predicted_class = model.predict(features)[0]
+        predicted_proba = model.predict_proba(features)[0]
+        probability = predicted_proba[predicted_class] * 100
+        st.subheader("Prediction Result:")
+        st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
+
+        # ============== 修改的SHAP部分开始 ==============
         def model_predict(x):
             return model.predict_proba(x)
 
-        # 使用样本均值作为背景（更稳定）
-        background = shap.utils.sample(features.values, 10)  # 随机采样10个虚拟背景样本
+        # 生成更稳定的背景数据
+        background = shap.utils.sample(features.values, 10)
         
-        # 创建解释器
-        explainer = shap.KernelExplainer(model_predict, background)
+        # 创建解释器时添加种子保证可重复性
+        explainer = shap.KernelExplainer(model_predict, background, seed=42)
         
-        # 计算SHAP值（仅针对当前样本）
-        shap_values = explainer.shap_values(features.values, nsamples=100)
+        # 计算SHAP值时限制样本数量
+        shap_values = explainer.shap_values(features.values, nsamples=50)
         
-        # 显示单样本force plot
+        # 使用matplotlib绘制静态force plot
         st.subheader("SHAP Force Plot")
-        shap.initjs()
-        force_plot = shap.force_plot(
-            explainer.expected_value[1],  # 使用正类期望值
-            shap_values[1][0],            # 正类SHAP值
-            features.values[0], 
-            feature_names=feature_names,
-            matplotlib=True
-        )
-        st.pyplot(force_plot)
+        try:
+            plt.figure(figsize=(10, 3))
+            shap.force_plot(
+                base_value=explainer.expected_value[1],
+                shap_values=shap_values[1][0],
+                features=features.values[0],
+                feature_names=feature_names,
+                matplotlib=True,
+                show=False  # 禁用自动显示
+            )
+            plt.tight_layout()
+            st.pyplot(plt.gcf())
+            plt.close()
+        except Exception as plot_error:
+            st.error(f"可视化生成失败: {str(plot_error)}")
+            st.markdown("""**备用可视化方案**:  
+            使用特征影响表格代替SHAP图""")
+
+        # 显示特征影响表格
+        st.subheader("Feature Impact Analysis")
+        impact_df = pd.DataFrame({
+            'Feature': feature_names,
+            'SHAP Value': shap_values[1][0],
+            'Feature Value': features.values[0]
+        }).sort_values('SHAP Value', key=abs, ascending=False)
         
-        # 显示重要特征（适配单样本）
-        st.subheader("Feature Impact")
-        single_shap = pd.DataFrame({
-            "Feature": feature_names,
-            "SHAP Value": shap_values[1][0],
-            "Value": features.values[0]
-        })
-        st.dataframe(single_shap.sort_values("SHAP Value", ascending=False))
+        # 添加颜色标记
+        def color_shap(val):
+            color = 'red' if val > 0 else 'blue'
+            return f'color: {color}; font-weight: bold'
+        
+        st.dataframe(
+            impact_df.style.applymap(color_shap, subset=['SHAP Value']),
+            height=400
+        )
+        # ============== 修改的SHAP部分结束 ==============
 
     except Exception as e:
-        st.error(f"SHAP Error: {str(e)}")
+        st.error(f"系统错误: {str(e)}")
+        st.markdown("""**故障排除建议**:  
+        1. 确认模型文件格式正确  
+        2. 检查输入值是否在有效范围内  
+        3. 尝试重新加载页面""")
