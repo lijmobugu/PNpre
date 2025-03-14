@@ -104,12 +104,6 @@ if st.button("Predict"):
         st.subheader("Prediction Result:")
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
-   
- 
-
-以下是修改后的代码，重点修复SHAP可视化问题并移除IPython依赖：
-
-```python
 # 预测与 SHAP 可视化
 if st.button("Predict"):
     try:
