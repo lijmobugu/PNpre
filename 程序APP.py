@@ -36,9 +36,9 @@ import warnings
 
 # 加载模型
 try:
-    model = joblib.load('stacking_classifier.pkl')
+    model = joblib.load('stacking_final.pkl')
 except FileNotFoundError:
-    st.error("Model file 'stacking_classifier.pkl' not found. Please upload the model file.")
+    st.error("Model file 'stacking_final.pkl' not found. Please upload the model file.")
     st.stop()
 
 # 特征范围定义
