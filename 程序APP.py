@@ -107,47 +107,79 @@ if st.button("Predict"):
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# 在预测结果显示之后添加以下代码（替换之前的SHAP代码）
+# 在预测结果显示之后替换为以下代码
 
 # SHAP可视化部分
-st.subheader("SHAP Feature Impact Explanation")
+st.subheader("SHAP特征影响解析")
 
 try:
-    # 使用通用解释器（适合任意模型）
-    background = shap.maskers.Partition(features, max_samples=50)  # 创建小样本背景数据
-    explainer = shap.KernelExplainer(model.predict_proba, background)
-    
-    # 计算SHAP值（nsamples参数控制计算速度）
-    with st.spinner("Generating explanation (this may take 10-20s)..."):
-        shap_values = explainer.shap_values(features, nsamples=100)
-    
-    # 创建特征重要性图
-    st.write("**Global Feature Importance**")
-    plt.figure(figsize=(8, 4))
-    shap.summary_plot(shap_values[1],  # 显示正类（AKI）的影响
-                     features=features,
-                     feature_names=feature_names,
-                     plot_type="bar",
-                     show=False)
-    st.pyplot(plt.gcf())
-    plt.clf()
-    
-    # 创建个体样本解释图
-    st.write("**Individual Prediction Breakdown**")
-    plt.figure(figsize=(10, 3))
-    shap.decision_plot(explainer.expected_value[1],
-                      shap_values[1],
-                      features=features,
-                      feature_names=feature_names,
-                      show=False)
-    plt.tight_layout()
-    st.pyplot(plt.gcf())
-    
+    # 数据完整性检查
+    if features.isnull().any().any() or np.isinf(features.values).any():
+        raise ValueError("输入数据包含缺失值或无限值，请检查所有数值特征的输入范围")
+
+    # 使用训练数据作为背景（示例需替换实际训练数据路径）
+    @st.cache_resource
+    def load_background_data():
+        try:
+            return pd.read_csv('training_data.csv').sample(50, random_state=42)
+        except:
+            # 生成合法背景数据的保底方案
+            synthetic_data = pd.DataFrame({feat: np.linspace(props['min'], props['max'], 50) 
+                                         if props['type'] == 'numerical' 
+                                         else [props['options'][0]]*50 
+                                         for feat, props in feature_ranges.items()})
+            return synthetic_data
+
+    background_data = load_background_data()
+
+    # 创建稳健的解释器
+    with st.spinner("正在生成解释（预计耗时8-15秒）..."):
+        explainer = shap.KernelExplainer(
+            model.predict_proba, 
+            background_data,
+            feature_names=feature_names
+        )
+        
+        # 分步计算SHAP值
+        shap_values = explainer.shap_values(
+            features,
+            nsamples=50,  # 平衡精度与速度
+            l1_reg="num_features(10)"  # 特征归并
+        )
+
+    # 可视化组件
+    with st.expander("特征全局影响力排名"):
+        plt.figure(figsize=(8, 4))
+        shap.summary_plot(shap_values[1], features, 
+                         plot_type="bar", 
+                         color_bar=False,
+                         max_display=10)
+        plt.title("TOP 10关键临床指标", fontsize=12)
+        st.pyplot(plt.gcf())
+        plt.clf()
+
+    with st.expander("个体化影响分解图"):
+        plt.figure(figsize=(10, 4))
+        shap.decision_plot(explainer.expected_value[1], 
+                          shap_values[1], 
+                          features.values[0],
+                          feature_names=feature_names,
+                          highlight=3)  # 高亮前三重要特征
+        plt.xticks(fontsize=8)
+        st.pyplot(plt.gcf())
+
 except Exception as e:
-    st.error(f"""
-        SHAP可视化失败: {str(e)}
-        可能原因及解决方法：
-        1. 模型结构复杂导致计算超时 → 稍后重试
-        2. 内存不足 → 减少nsamples参数值
-        3. 浏览器兼容问题 → 刷新页面
-        """)
+    error_info = f"""
+    ## 解析失败: {str(e)}
+    
+    **可能原因及应对措施**：
+    
+    1. 数据完整性问题 → 检查所有数值输入是否在指定范围内
+    2. 内存限制 → 尝试刷新页面后重新提交
+    3. 复杂特征交互 → 联系技术人员调整模型解释参数
+    
+    **技术细节供开发参考**:
+    - 输入数据摘要: {features.describe().to_dict()}
+    - 异常特征检测: {features.isnull().sum().to_dict()}
+    """
+    st.error(error_info)
