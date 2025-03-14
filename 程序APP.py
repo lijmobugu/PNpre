@@ -107,9 +107,13 @@ if st.button("Predict"):
     # 确保 features 是一个二维数组  
         features_array = features.values  # 这是一个二维数组  
 
+        # 创建一个可调用的函数  
+        def model_predict(x):  
+            return model.predict_proba(x)  # 返回预测概率  
+
         # SHAP 可视化  
-        explainer = shap.Explainer(model, features_array)  
-        shap_values = explainer(features_array)  
+        explainer = shap.KernelExplainer(model_predict, features_array)  
+        shap_values = explainer.shap_values(features_array)  
 
         # 绘制 SHAP 值图  
         st.subheader("SHAP Values:")  
