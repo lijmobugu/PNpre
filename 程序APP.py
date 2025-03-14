@@ -29,7 +29,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif, RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import SelectFromModel
-
+from sklearn.preprocessing import LabelEncoder  
 import joblib
 import logging
 import warnings
