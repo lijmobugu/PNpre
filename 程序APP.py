@@ -105,7 +105,7 @@ if st.button("Predict"):
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")
 
 # 预测与 SHAP 可视化
-if st.button("Predict"):
+    if st.button("Predict"):
     try:
         # ... [保持原有的预测代码不变] ...
 
