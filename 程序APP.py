@@ -106,3 +106,34 @@ if st.button("Predict"):
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
+# 在预测结果显示之后添加以下代码（缩进层级与predicted_proba同级）
+
+# SHAP可视化部分
+st.subheader("SHAP Feature Impact Explanation")
+
+try:
+    # 创建SHAP解释器（适用于树模型）
+    explainer = shap.TreeExplainer(model)
+    
+    # 计算SHAP值
+    shap_values = explainer.shap_values(features)
+    
+    # 创建解释图
+    plt.figure(figsize=(10, 6))
+    shap.summary_plot(shap_values, features, plot_type="bar", show=False)
+    st.pyplot(plt.gcf())
+    plt.clf()
+    
+    # 创建详细解释图
+    st.write("Detailed Feature Impact:")
+    plt.figure(figsize=(10, 4))
+    shap.force_plot(explainer.expected_value[0], 
+                   shap_values[0], 
+                   features,
+                   matplotlib=True,
+                   show=False)
+    st.pyplot(plt.gcf())
+    
+except Exception as e:
+    st.error(f"SHAP visualization failed: {str(e)}")
