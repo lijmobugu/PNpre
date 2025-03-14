@@ -77,8 +77,9 @@ if st.button("Predict"):
         st.write(f"Predicted possibility of AKI is **{probability:.2f}%**")  
 
         # 创建LIME解释器  
+        # 使用训练数据而不是当前输入的特征  
         explainer = LimeTabularExplainer(  
-            training_data=features.values,  # 训练数据  
+            training_data=features.values,  # 这里需要使用模型训练时的原始数据  
             feature_names=feature_names,     # 特征名称  
             class_names=["No AKI", "AKI"],   # 类别名称  
             mode='classification'             # 模式  
